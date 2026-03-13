@@ -1,0 +1,37 @@
+[project]
+name = "bin-generator"
+version = "0.1.0"
+description = "Parametric FDM bin generator using CadQuery"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Arseniy" }]
+license = { text = "MIT" }
+
+dependencies = [
+  "cadquery>=2.4"
+]
+
+[project.optional-dependencies]
+dev = [
+    "ipykernel>=6.0",
+]
+docs = [
+  "mkdocs>=1.6",
+  "mkdocs-material>=9.6",
+  "pymdown-extensions>=10.0",
+  "mkdocstrings[python]>=0.25",
+  "griffe>=0.45",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project.scripts]
+bin-gen = "bin_generator.cli:main"
