@@ -8,53 +8,70 @@ def rounded_rect_sketch(x, y, r):
     return cq.Sketch().rect(x, y).vertices().fillet(r)
 
 
-def build_bin_shell(
-    x,
-    y,
-    h,
-    wall,
-    bottom_offset,
-    lip_h,
-    ramp_h,
-    small_r,
-    big_r,
-):
-
-    small_x = x - bottom_offset
-    small_y = y - bottom_offset
-
-    lip = (
+def make_lip(small_x, small_y, small_r, lip_h):
+    return (
         cq.Workplane("XY")
         .placeSketch(rounded_rect_sketch(small_x, small_y, small_r))
         .extrude(lip_h)
     )
 
-    ramp_bottom = (
+
+def make_ramp(small_x, small_y, x, y, small_r, big_r, lip_h, ramp_h):
+    bottom = (
         cq.Workplane("XY")
         .workplane(offset=lip_h)
         .placeSketch(rounded_rect_sketch(small_x, small_y, small_r))
     )
 
-    ramp_top = (
+    top = (
         cq.Workplane("XY")
         .workplane(offset=lip_h + ramp_h)
         .placeSketch(rounded_rect_sketch(x, y, big_r))
     )
 
-    ramp = ramp_bottom.add(ramp_top).loft()
+    return bottom.add(top).loft()
 
-    walls = (
+
+def make_walls(x, y, big_r, z0, height):
+    return (
         cq.Workplane("XY")
-        .workplane(offset=lip_h + ramp_h)
+        .workplane(offset=z0)
         .placeSketch(rounded_rect_sketch(x, y, big_r))
-        .extrude(h - lip_h - ramp_h)
+        .extrude(height)
     )
 
-    outer = lip.union(ramp).union(walls)
 
-    model = outer.faces(">Z").shell(-wall).edges("<Z").chamfer(0.4)
+def build_bin_shell(
+    x, y, h, wall,
+    bottom_offset, lip_h, ramp_h,
+    small_r, big_r,
+    use_ramp
+):
+    parts = []
 
-    return model
+    if use_ramp:
+        small_x = x - bottom_offset
+        small_y = y - bottom_offset
+
+        parts.append(make_lip(small_x, small_y, small_r, lip_h))
+        parts.append(make_ramp(
+            small_x, small_y,
+            x, y,
+            small_r, big_r,
+            lip_h, ramp_h
+        ))
+
+        z0 = lip_h + ramp_h
+    else:
+        z0 = 0
+
+    parts.append(make_walls(x, y, big_r, z0, h - z0))
+
+    outer = parts[0]
+    for p in parts[1:]:
+        outer = outer.union(p)
+
+    return outer.faces(">Z").shell(-wall).edges("<Z").chamfer(0.4)
 
 
 def place_ears(model, x, y, h, ear_offset):
@@ -97,6 +114,7 @@ def make_bin(
     big_r=10.0,
     ear_offset=1.9,
     ears=True,
+    use_ramp=True,
 ):
 
     model = build_bin_shell(
@@ -109,6 +127,7 @@ def make_bin(
         ramp_h,
         small_r,
         big_r,
+        use_ramp
     )
 
     if ears:
