@@ -29,10 +29,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--h", type=float, default=19.5, help="Bin height (Z)")
     parser.add_argument("--wall", type=float, default=1.2, help="Wall thickness")
     parser.add_argument(
-        "--bottom-offset",
+        "--clearance",
         type=float,
-        default=3,
-        help="Bottom inset from outer dimensions",
+        default=0.6,
+        help="Stacking clearance gap",
     )
     parser.add_argument("--lip-h", type=float, default=3, help="Lip height")
     parser.add_argument("--ramp-h", type=float, default=1.5, help="Ramp height")
@@ -80,7 +80,7 @@ def main(argv: list[str] | None = None) -> None:
         y=args.y,
         h=args.h,
         wall=args.wall,
-        bottom_offset=args.bottom_offset,
+        clearance=args.clearance,
         lip_h=args.lip_h,
         ramp_h=args.ramp_h,
         small_r=args.small_r,

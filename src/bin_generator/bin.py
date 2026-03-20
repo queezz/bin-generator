@@ -43,19 +43,19 @@ def make_walls(x, y, big_r, z0, height):
 
 def build_bin_shell(
     x, y, h, wall,
-    bottom_offset, lip_h, ramp_h,
+    clearance, lip_h, ramp_h,
     small_r, big_r,
     use_ramp
 ):
     parts = []
 
     if use_ramp:
-        small_x = x - bottom_offset
-        small_y = y - bottom_offset
+        inset_x = x - 2 * wall - clearance
+        inset_y = y - 2 * wall - clearance
 
-        parts.append(make_lip(small_x, small_y, small_r, lip_h))
+        parts.append(make_lip(inset_x, inset_y, small_r, lip_h))
         parts.append(make_ramp(
-            small_x, small_y,
+            inset_x, inset_y,
             x, y,
             small_r, big_r,
             lip_h, ramp_h
@@ -107,7 +107,7 @@ def make_bin(
     y=50.0,
     h=19.5,
     wall=1.2,
-    bottom_offset=3,
+    clearance=0.6,
     lip_h=3.0,
     ramp_h=1.5,
     small_r=8.0,
@@ -122,7 +122,7 @@ def make_bin(
         y,
         h,
         wall,
-        bottom_offset,
+        clearance,
         lip_h,
         ramp_h,
         small_r,
