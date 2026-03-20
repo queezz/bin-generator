@@ -8,24 +8,24 @@ def rounded_rect_sketch(x, y, r):
     return cq.Sketch().rect(x, y).vertices().fillet(r)
 
 
-def make_lip(small_x, small_y, small_r, lip_h):
+def make_inset_wall(small_x, small_y, small_r, inset_h):
     return (
         cq.Workplane("XY")
         .placeSketch(rounded_rect_sketch(small_x, small_y, small_r))
-        .extrude(lip_h)
+        .extrude(inset_h)
     )
 
 
-def make_ramp(small_x, small_y, x, y, small_r, big_r, lip_h, ramp_h):
+def make_ramp(small_x, small_y, x, y, small_r, big_r, inset_h, ramp_h):
     bottom = (
         cq.Workplane("XY")
-        .workplane(offset=lip_h)
+        .workplane(offset=inset_h)
         .placeSketch(rounded_rect_sketch(small_x, small_y, small_r))
     )
 
     top = (
         cq.Workplane("XY")
-        .workplane(offset=lip_h + ramp_h)
+        .workplane(offset=inset_h + ramp_h)
         .placeSketch(rounded_rect_sketch(x, y, big_r))
     )
 
@@ -43,7 +43,7 @@ def make_walls(x, y, big_r, z0, height):
 
 def build_bin_shell(
     x, y, h, wall,
-    clearance, lip_h, ramp_h,
+    clearance, inset_h, max_overhang_angle,
     small_r, big_r,
     use_ramp
 ):
@@ -53,15 +53,20 @@ def build_bin_shell(
         inset_x = x - 2 * wall - clearance
         inset_y = y - 2 * wall - clearance
 
-        parts.append(make_lip(inset_x, inset_y, small_r, lip_h))
+        import math
+
+        dx = (x - inset_x) / 2
+        ramp_h = dx / math.tan(math.radians(max_overhang_angle))
+
+        parts.append(make_inset_wall(inset_x, inset_y, small_r, inset_h))
         parts.append(make_ramp(
             inset_x, inset_y,
             x, y,
             small_r, big_r,
-            lip_h, ramp_h
+            inset_h, ramp_h
         ))
 
-        z0 = lip_h + ramp_h
+        z0 = inset_h + ramp_h
     else:
         z0 = 0
 
@@ -108,8 +113,8 @@ def make_bin(
     h=19.5,
     wall=1.2,
     clearance=0.6,
-    lip_h=3.0,
-    ramp_h=1.5,
+    inset_h=3.0,
+    max_overhang_angle=50,
     small_r=8.0,
     big_r=10.0,
     ear_offset=1.9,
@@ -123,8 +128,8 @@ def make_bin(
         h,
         wall,
         clearance,
-        lip_h,
-        ramp_h,
+        inset_h,
+        max_overhang_angle,
         small_r,
         big_r,
         use_ramp

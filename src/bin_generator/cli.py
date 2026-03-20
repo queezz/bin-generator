@@ -34,8 +34,13 @@ def build_parser() -> argparse.ArgumentParser:
         default=0.6,
         help="Stacking clearance gap",
     )
-    parser.add_argument("--lip-h", type=float, default=3, help="Lip height")
-    parser.add_argument("--ramp-h", type=float, default=1.5, help="Ramp height")
+    parser.add_argument("--inset-h", type=float, default=3, help="Inset wall height")
+    parser.add_argument(
+        "--max-overhang-angle",
+        type=float,
+        default=55,
+        help="Max overhang angle for ramp (degrees)",
+    )
     parser.add_argument("--small-r", type=float, default=8, help="Lip corner radius")
     parser.add_argument("--big-r", type=float, default=10, help="Wall corner radius")
     parser.add_argument(
@@ -81,8 +86,8 @@ def main(argv: list[str] | None = None) -> None:
         h=args.h,
         wall=args.wall,
         clearance=args.clearance,
-        lip_h=args.lip_h,
-        ramp_h=args.ramp_h,
+        inset_h=args.inset_h,
+        max_overhang_angle=args.max_overhang_angle,
         small_r=args.small_r,
         big_r=args.big_r,
         ear_offset=args.ear_offset,
