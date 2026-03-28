@@ -2,6 +2,22 @@ import cadquery as cq
 import math
 
 
+def make_bump(x=10, y=10, z=0.8):
+    wp = cq.Workplane("XY").box(x, y, z, centered=(True, True, False))
+
+    # chamfer top edges slightly
+    wp = wp.edges(">Z").chamfer(z - 0.01)
+
+    # safe fillet (like you did)
+    bb = wp.faces(">Z").val().BoundingBox()
+    limit = min(bb.xlen, bb.ylen) / 2.0
+    r = min(3 * z, 0.99 * limit)
+
+    wp = wp.edges(">Z").fillet(r)
+
+    return wp.val()
+
+
 # -------------------------------
 # 1. GEOMETRY: edges + normals
 # -------------------------------
@@ -33,7 +49,7 @@ def get_edges_with_normals(x, y, big_r):
 # -------------------------------
 # 2. SAMPLING (fixed!)
 # -------------------------------
-def sample_line(p0, p1, spacing, xy_margin, phase):
+def sample_line(p0, p1, spacing, xy_margin, phase, big_r=10.0):
     dx = p1.x - p0.x
     dy = p1.y - p0.y
     L = math.hypot(dx, dy)
@@ -81,7 +97,7 @@ def make_pattern_layer(
 ):
     edges = get_edges_with_normals(x, y, big_r)
 
-    base = cq.Workplane("XY").sphere(r_sphere).val()
+    base = make_bump()
     solids = []
 
     for p0, p1, normal in edges:
@@ -106,17 +122,18 @@ def place_wall_pattern(
     y,
     h,
     big_r=10.0,
-    delta_pattern=30.0,
-    delta_h=20.0,
-    r_sphere=10.0,
-    z_margin_top=5.0,
-    z_margin_bottom=20.0,
+    delta_pattern=6.0,
+    delta_h=6.0,
+    r_sphere=0.6,
+    z_margin_top=2.0,
+    z_margin_bottom=2.0,
     xy_margin=3.0,
+    offset_factor=0.0,
 ):
     all_solids = []
 
-    # build ONE sphere
-    base = cq.Workplane("XY").sphere(r_sphere).val()
+    # build ONE bump
+    base = make_bump(x=5, y=5, z=0.8)
 
     z = z_margin_bottom
     layer_index = 0
@@ -130,7 +147,10 @@ def place_wall_pattern(
             pts = sample_line(p0, p1, delta_pattern, xy_margin, phase)
 
             for p in pts:
-                loc = cq.Location(cq.Vector(p.x, p.y, z))
+                offset = r_sphere * offset_factor
+                px = p.x + normal.x * offset
+                py = p.y + normal.y * offset
+                loc = cq.Location(cq.Vector(px, py, z))
                 all_solids.append(base.moved(loc))
 
         z += delta_h
@@ -146,11 +166,5 @@ def place_wall_pattern(
 #     x=50,
 #     y=60,
 #     h=40,
-#     big_r=10.0,
-#     delta_pattern=3.0,
-#     delta_h=6.0,
-#     r_sphere=1.0,
-#     z_margin_top=2.0,
-#     z_margin_bottom=2.0,
-#     xy_margin=3.0,
+#     offset_factor=0.8,
 # )
