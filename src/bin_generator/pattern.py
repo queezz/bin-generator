@@ -106,11 +106,11 @@ def place_wall_pattern(
     y,
     h,
     big_r=10.0,
-    delta_pattern=6.0,
-    delta_h=6.0,
-    r_sphere=0.6,
-    z_margin_top=2.0,
-    z_margin_bottom=2.0,
+    delta_pattern=30.0,
+    delta_h=20.0,
+    r_sphere=10.0,
+    z_margin_top=5.0,
+    z_margin_bottom=20.0,
     xy_margin=3.0,
 ):
     all_solids = []

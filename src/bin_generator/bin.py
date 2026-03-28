@@ -2,6 +2,7 @@ import cadquery as cq
 from pathlib import Path
 
 from .ears import make_ear
+from .pattern import place_wall_pattern
 
 
 def rounded_rect_sketch(x, y, r):
@@ -120,6 +121,8 @@ def make_bin(
     ear_offset=1.9,
     ears=True,
     use_ramp=True,
+    pattern=False,
+    pattern_params=None,
 ):
 
     model = build_bin_shell(
@@ -138,6 +141,17 @@ def make_bin(
     if ears:
         model = place_ears(model, x, y, h, ear_offset)
 
+    if pattern:
+        patt = place_wall_pattern(
+            x=x,
+            y=y,
+            h=h,
+            big_r=big_r,
+            **(pattern_params or {}),
+        )
+        if patt:
+            model = model.union(patt)
+
     return model
 
 
@@ -150,3 +164,17 @@ def export(model, path, fmt: str = "stl"):
 
     if fmt in ("step", "both"):
         cq.exporters.export(model, str(path.with_suffix(".step")))
+
+
+# Example:
+#     model = make_bin(
+#         x=70,
+#         y=50,
+#         h=40,
+#         pattern=True,
+#         pattern_params={
+#             "delta_pattern": 4.0,
+#             "delta_h": 6.0,
+#             "r_sphere": 0.8,
+#         }
+#     )
