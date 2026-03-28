@@ -141,6 +141,7 @@ def make_bin(
     if ears:
         model = place_ears(model, x, y, h, ear_offset)
 
+    patt = None
     if pattern:
         patt = place_wall_pattern(
             x=x,
@@ -149,8 +150,11 @@ def make_bin(
             big_r=big_r,
             **(pattern_params or {}),
         )
-        if patt:
-            model = model.union(patt)
+
+    if pattern and patt:
+        model = cq.Workplane("XY").newObject(
+            model.val().Solids() + patt.val().Solids()
+        )
 
     return model
 
@@ -166,15 +170,14 @@ def export(model, path, fmt: str = "stl"):
         cq.exporters.export(model, str(path.with_suffix(".step")))
 
 
-# Example:
-#     model = make_bin(
-#         x=70,
-#         y=50,
-#         h=40,
-#         pattern=True,
-#         pattern_params={
-#             "delta_pattern": 4.0,
-#             "delta_h": 6.0,
-#             "r_sphere": 0.8,
-#         }
-#     )
+# model = make_bin(
+#     x=70,
+#     y=50,
+#     h=40,
+#     pattern=True,
+#     pattern_params={
+#         "delta_pattern": 4.0,
+#         "delta_h": 6.0,
+#         "r_sphere": 0.8,
+#     }
+# )
