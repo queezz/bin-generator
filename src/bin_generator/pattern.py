@@ -113,44 +113,44 @@ def place_wall_pattern(
     z_margin_bottom=2.0,
     xy_margin=3.0,
 ):
-    result = None
+    all_solids = []
+
+    # build ONE sphere
+    base = cq.Workplane("XY").sphere(r_sphere).val()
 
     z = z_margin_bottom
     layer_index = 0
 
+    edges = get_edges_with_normals(x, y, big_r)
+
     while z < h - z_margin_top:
-        # ---- 2-phase shift ----
         phase = 0.0 if layer_index % 2 == 0 else delta_pattern * 0.5
 
-        layer = make_pattern_layer(
-            x,
-            y,
-            big_r,
-            z,
-            delta_pattern,
-            r_sphere,
-            xy_margin,
-            phase,
-        )
+        for p0, p1, normal in edges:
+            pts = sample_line(p0, p1, delta_pattern, xy_margin, phase)
 
-        if layer:
-            result = layer if result is None else result.union(layer)
+            for p in pts:
+                loc = cq.Location(cq.Vector(p.x, p.y, z))
+                all_solids.append(base.moved(loc))
 
         z += delta_h
         layer_index += 1
 
-    return result
+    if not all_solids:
+        return None
+
+    return cq.Workplane("XY").newObject([cq.Compound.makeCompound(all_solids)])
 
 
-result = place_wall_pattern(
-    x=50,
-    y=60,
-    h=40,
-    big_r=10.0,
-    delta_pattern=3.0,
-    delta_h=6.0,
-    r_sphere=1.0,
-    z_margin_top=2.0,
-    z_margin_bottom=2.0,
-    xy_margin=3.0,
-)
+# result = place_wall_pattern(
+#     x=50,
+#     y=60,
+#     h=40,
+#     big_r=10.0,
+#     delta_pattern=3.0,
+#     delta_h=6.0,
+#     r_sphere=1.0,
+#     z_margin_top=2.0,
+#     z_margin_bottom=2.0,
+#     xy_margin=3.0,
+# )
