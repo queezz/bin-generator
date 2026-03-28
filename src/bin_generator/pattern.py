@@ -2,7 +2,7 @@ import cadquery as cq
 import math
 
 
-def make_bump(x=10, y=10, z=0.8):
+def make_bump(x=8, y=8, z=0.8):
     wp = cq.Workplane("XY").box(x, y, z, centered=(True, True, False))
 
     # chamfer top edges slightly
@@ -16,6 +16,34 @@ def make_bump(x=10, y=10, z=0.8):
     wp = wp.edges(">Z").fillet(r)
 
     return wp.val()
+
+
+def bump_wall_location(px, py, z, p0, p1, normal):
+    """Wall-aligned placement: local Z = outward normal, local X = along edge."""
+    n = cq.Vector(normal.x, normal.y, normal.z)
+    if n.Length < 1e-12:
+        n = cq.Vector(0, 0, 1)
+    else:
+        n = n.normalized()
+
+    t = cq.Vector(p1.x - p0.x, p1.y - p0.y, p1.z - p0.z)
+    if t.Length < 1e-12:
+        t = cq.Vector(1, 0, 0)
+    else:
+        t = t.normalized()
+
+    t = t - n * t.dot(n)
+    if t.Length < 1e-12:
+        t = cq.Vector(0, 0, 1).cross(n)
+        if t.Length < 1e-12:
+            t = cq.Vector(1, 0, 0)
+        else:
+            t = t.normalized()
+    else:
+        t = t.normalized()
+
+    origin = cq.Vector(px, py, z)
+    return cq.Plane(origin, t, n).location
 
 
 # -------------------------------
@@ -83,38 +111,6 @@ def sample_line(p0, p1, spacing, xy_margin, phase, big_r=10.0):
 
 
 # -------------------------------
-# 3. SINGLE LAYER
-# -------------------------------
-def make_pattern_layer(
-    x,
-    y,
-    big_r,
-    z,
-    delta_pattern,
-    r_sphere,
-    xy_margin,
-    phase=0.0,
-):
-    edges = get_edges_with_normals(x, y, big_r)
-
-    base = make_bump()
-    solids = []
-
-    for p0, p1, normal in edges:
-        pts = sample_line(p0, p1, delta_pattern, xy_margin, phase)
-
-        for p in pts:
-            loc = cq.Location(cq.Vector(p.x, p.y, z))
-            solids.append(base.moved(loc))
-
-    if not solids:
-        return None
-
-    comp = cq.Compound.makeCompound(solids)
-    return cq.Workplane("XY").newObject([comp])
-
-
-# -------------------------------
 # 4. FULL PATTERN (Z STACK)
 # -------------------------------
 def place_wall_pattern(
@@ -122,18 +118,18 @@ def place_wall_pattern(
     y,
     h,
     big_r=10.0,
-    delta_pattern=6.0,
-    delta_h=6.0,
+    delta_pattern=10.0,
+    delta_h=10.0,
     r_sphere=0.6,
-    z_margin_top=2.0,
-    z_margin_bottom=2.0,
-    xy_margin=3.0,
+    z_margin_top=5.0,
+    z_margin_bottom=10.0,
+    xy_margin=5.0,
     offset_factor=0.0,
 ):
     all_solids = []
 
     # build ONE bump
-    base = make_bump(x=5, y=5, z=0.8)
+    base = make_bump()
 
     z = z_margin_bottom
     layer_index = 0
@@ -150,7 +146,7 @@ def place_wall_pattern(
                 offset = r_sphere * offset_factor
                 px = p.x + normal.x * offset
                 py = p.y + normal.y * offset
-                loc = cq.Location(cq.Vector(px, py, z))
+                loc = bump_wall_location(px, py, z, p0, p1, normal)
                 all_solids.append(base.moved(loc))
 
         z += delta_h
