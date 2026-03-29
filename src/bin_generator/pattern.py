@@ -167,9 +167,9 @@ def place_wall_pattern(
             else:
                 last_end = xy_margin
 
-            remainder = usable_end - last_end
+            # ---- reserve gap before edge bump ----
+            remainder = usable_end - last_end - gap
 
-            # ---- edge bump ----
             XMIN = 3.0
 
             if remainder >= XMIN:
@@ -177,7 +177,8 @@ def place_wall_pattern(
 
                 edge_bump = make_bump(x=X_edge, y=bb.ylen, z=bb.zlen)
 
-                s_edge = last_end + X_edge / 2
+                # ---- place AFTER a gap ----
+                s_edge = last_end + gap + X_edge / 2
 
                 px = p0.x + tx * s_edge
                 py = p0.y + ty * s_edge
