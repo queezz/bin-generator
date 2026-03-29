@@ -2,16 +2,17 @@ import cadquery as cq
 import math
 
 
-def make_bump(x=18, y=8, z=0.8):
-    wp = cq.Workplane("XY").box(x, y, z, centered=(True, True, False))
+def make_bump(length=18, height=8, depth=0.8):
+    """Bump in wall-local sense: length along edge, height along bin H, depth outward."""
+    wp = cq.Workplane("XY").box(length, height, depth, centered=(True, True, False))
 
     # chamfer top edges slightly
-    wp = wp.edges(">Z").chamfer(z - 0.01)
+    wp = wp.edges(">Z").chamfer(depth - 0.01)
 
     # safe fillet (like you did)
     bb = wp.faces(">Z").val().BoundingBox()
     limit = min(bb.xlen, bb.ylen) / 2.0
-    r = min(3 * z, 0.99 * limit)
+    r = min(3 * depth, 0.99 * limit)
 
     wp = wp.edges(">Z").fillet(r)
 
@@ -19,7 +20,7 @@ def make_bump(x=18, y=8, z=0.8):
 
 
 def bump_wall_location(px, py, z, p0, p1, normal):
-    """Wall-aligned placement: local Z = outward normal, local X = along edge."""
+    """Wall-aligned placement: depth = outward normal, length = along edge."""
     n = cq.Vector(normal.x, normal.y, normal.z)
     if n.Length < 1e-12:
         n = cq.Vector(0, 0, 1)
@@ -77,7 +78,7 @@ def get_edges_with_normals(x, y, big_r):
 # -------------------------------
 # 2. SAMPLING (fixed!)
 # -------------------------------
-def sample_line(p0, p1, spacing, xy_margin, phase, big_r=10.0):
+def sample_line(p0, p1, pitch, xy_margin, phase, big_r=10.0):
     dx = p1.x - p0.x
     dy = p1.y - p0.y
     L = math.hypot(dx, dy)
@@ -103,9 +104,11 @@ def place_wall_pattern(
     y,
     h,
     big_r=10.0,
-    delta_pattern=25.0,
+    pitch=25.0,
     delta_h=10.0,
-    r_sphere=0.6,
+    bump_length=18.0,
+    bump_height=8.0,
+    bump_depth=0.8,
     z_margin_top=5.0,
     z_margin_bottom=10.0,
     xy_margin=0.0,
@@ -113,36 +116,36 @@ def place_wall_pattern(
 ):
     all_solids = []
 
-    # build ONE bump
-    base = make_bump()
-    bb = base.BoundingBox()
-    X = bb.xlen
+    base = make_bump(
+        length=bump_length,
+        height=bump_height,
+        depth=bump_depth,
+    )
 
     z = z_margin_bottom
     layer_index = 0
 
     edges = get_edges_with_normals(x, y, big_r)
 
+    # Same offset scale as previous default r_sphere=0.6
+    normal_offset_scale = 0.6
+
     while z < h - z_margin_top:
-        phase = 0.0 if layer_index % 2 == 0 else delta_pattern * 0.5
+        phase = 0.0 if layer_index % 2 == 0 else pitch * 0.5
 
         for p0, p1, normal in edges:
-            result = sample_line(p0, p1, delta_pattern, xy_margin, phase)
+            result = sample_line(p0, p1, pitch, xy_margin, phase)
             if result is None:
                 continue
 
             tx, ty, usable, L = result
 
-            pitch = delta_pattern
-            gap = pitch - X
+            gap = pitch - bump_length
 
-            # s_min = xy_margin + X / 2
-            # s_max = L - xy_margin - X / 2
+            base_s_min = xy_margin + bump_length / 2
+            base_s_max = L - xy_margin - bump_length / 2
 
-            base_s_min = xy_margin + X / 2
-            base_s_max = L - xy_margin - X / 2
-
-            phase = 0.0 if layer_index % 2 == 0 else X / 2
+            phase = 0.0 if layer_index % 2 == 0 else bump_length / 2
 
             s_min = base_s_min + phase
             s_max = base_s_max
@@ -159,7 +162,7 @@ def place_wall_pattern(
                 px = p0.x + tx * s
                 py = p0.y + ty * s
 
-                offset = r_sphere * offset_factor
+                offset = normal_offset_scale * offset_factor
                 px += normal.x * offset
                 py += normal.y * offset
 
@@ -171,27 +174,31 @@ def place_wall_pattern(
 
             if n > 0:
                 last_center = s_min + (n - 1) * pitch
-                last_end = last_center + X / 2
+                last_end = last_center + bump_length / 2
             else:
                 last_end = xy_margin
 
             # ---- reserve gap before edge bump ----
             remainder = usable_end - last_end - gap
 
-            XMIN = 3.0
+            edge_length_min = 3.0
 
-            if remainder >= XMIN:
-                X_edge = remainder
+            if remainder >= edge_length_min:
+                edge_length = remainder
 
-                edge_bump = make_bump(x=X_edge, y=bb.ylen, z=bb.zlen)
+                edge_bump = make_bump(
+                    length=edge_length,
+                    height=bump_height,
+                    depth=bump_depth,
+                )
 
                 # ---- place AFTER a gap ----
-                s_edge = last_end + gap + X_edge / 2
+                s_edge = last_end + gap + edge_length / 2
 
                 px = p0.x + tx * s_edge
                 py = p0.y + ty * s_edge
 
-                offset = r_sphere * offset_factor
+                offset = normal_offset_scale * offset_factor
                 px += normal.x * offset
                 py += normal.y * offset
 

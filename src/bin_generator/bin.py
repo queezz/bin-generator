@@ -143,12 +143,19 @@ def make_bin(
 
     patt = None
     if pattern:
+        default_pattern_params = {
+            "pitch": 25.0,
+            "delta_h": 10.0,
+            "bump_length": 18.0,
+            "bump_height": 8.0,
+            "bump_depth": 0.8,
+        }
         patt = place_wall_pattern(
             x=x,
             y=y,
             h=h,
             big_r=big_r,
-            **(pattern_params or {}),
+            **{**default_pattern_params, **(pattern_params or {})},
         )
 
     if pattern and patt:
@@ -176,8 +183,10 @@ def export(model, path, fmt: str = "stl"):
 #     h=40,
 #     pattern=True,
 #     pattern_params={
-#         "delta_pattern": 4.0,
+#         "pitch": 4.0,
 #         "delta_h": 6.0,
-#         "r_sphere": 0.8,
+#         "bump_length": 18.0,
+#         "bump_height": 8.0,
+#         "bump_depth": 0.8,
 #     }
 # )
