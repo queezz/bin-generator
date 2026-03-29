@@ -136,51 +136,56 @@ def place_wall_pattern(
             pitch = delta_pattern
             gap = pitch - X
 
-            # n = int(usable // pitch)
-            s0 = xy_margin + X / 2 + phase
-            s_end = L - xy_margin - X / 2
+            s_min = xy_margin + X / 2
+            s_max = L - xy_margin - X / 2
 
-            # if s0 > s_end:
-            #     n = 0
-            # else:
-            #     n = int((s_end - s0) // pitch) + 1  # keep this
-            #     # BUT clamp by construction:
-            #     if s0 + (n - 1) * pitch > s_end:
-            #         n -= 1
-
-            if s0 > s_end:
+            if s_min > s_max:
                 n = 0
             else:
-                n = int((s_end - s0) / pitch) + 1
+                n = int((s_max - s_min) // pitch) + 1
 
-            remainder = usable - n * pitch
-
-            s0 = xy_margin
-            s_start = s0 + X / 2 + phase
-
+            # ---- place full bumps ----
             for i in range(n):
-                s = s_start + i * pitch
+                s = s_min + i * pitch
 
                 px = p0.x + tx * s
                 py = p0.y + ty * s
 
                 offset = r_sphere * offset_factor
-                px = px + normal.x * offset
-                py = py + normal.y * offset
+                px += normal.x * offset
+                py += normal.y * offset
+
                 loc = bump_wall_location(px, py, z, p0, p1, normal)
                 all_solids.append(base.moved(loc))
 
-            if remainder > X * 0.3:
-                X_edge = remainder - gap
-                X_edge = max(X_edge, 1.0)
+            # ---- remainder ----
+            usable_end = L - xy_margin
+
+            if n > 0:
+                last_center = s_min + (n - 1) * pitch
+                last_end = last_center + X / 2
+            else:
+                last_end = xy_margin
+
+            remainder = usable_end - last_end
+
+            # ---- edge bump ----
+            XMIN = 3.0
+
+            if remainder >= XMIN:
+                X_edge = remainder
+
                 edge_bump = make_bump(x=X_edge, y=bb.ylen, z=bb.zlen)
-                # s_edge = xy_margin + n * pitch + X_edge / 2
-                s_edge = s_start + n * pitch
+
+                s_edge = last_end + X_edge / 2
+
                 px = p0.x + tx * s_edge
                 py = p0.y + ty * s_edge
+
                 offset = r_sphere * offset_factor
-                px = px + normal.x * offset
-                py = py + normal.y * offset
+                px += normal.x * offset
+                py += normal.y * offset
+
                 loc = bump_wall_location(px, py, z, p0, p1, normal)
                 all_solids.append(edge_bump.moved(loc))
 
