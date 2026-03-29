@@ -136,8 +136,16 @@ def place_wall_pattern(
             pitch = delta_pattern
             gap = pitch - X
 
-            s_min = xy_margin + X / 2
-            s_max = L - xy_margin - X / 2
+            # s_min = xy_margin + X / 2
+            # s_max = L - xy_margin - X / 2
+
+            base_s_min = xy_margin + X / 2
+            base_s_max = L - xy_margin - X / 2
+
+            phase = 0.0 if layer_index % 2 == 0 else X / 2
+
+            s_min = base_s_min + phase
+            s_max = base_s_max
 
             if s_min > s_max:
                 n = 0
