@@ -145,7 +145,7 @@ def place_wall_pattern(
             base_s_min = xy_margin + bump_length / 2
             base_s_max = L - xy_margin - bump_length / 2
 
-            phase = 0.0 if layer_index % 2 == 0 else bump_length / 2
+            phase = 0.0 if layer_index % 2 == 0 else (bump_length + gap) / 2
 
             s_min = base_s_min + phase
             s_max = base_s_max
@@ -155,56 +155,48 @@ def place_wall_pattern(
             else:
                 n = int((s_max - s_min) // pitch) + 1
 
-            # ---- place full bumps ----
-            for i in range(n):
-                s = s_min + i * pitch
-
-                px = p0.x + tx * s
-                py = p0.y + ty * s
-
-                offset = normal_offset_scale * offset_factor
-                px += normal.x * offset
-                py += normal.y * offset
-
-                loc = bump_wall_location(px, py, z, p0, p1, normal)
-                all_solids.append(base.moved(loc))
-
-            # ---- remainder ----
-            usable_end = L - xy_margin
-
-            if n > 0:
-                last_center = s_min + (n - 1) * pitch
-                last_end = last_center + bump_length / 2
-            else:
-                last_end = xy_margin
-
-            # ---- reserve gap before edge bump ----
-            remainder = usable_end - last_end - gap
-
             edge_length_min = 3.0
 
-            if remainder >= edge_length_min:
-                edge_length = remainder
+            allowed_start = xy_margin
+            allowed_end = L - xy_margin
 
-                edge_bump = make_bump(
-                    length=edge_length,
-                    height=bump_height,
-                    depth=bump_depth,
-                )
+            for i in range(-1, n + 1):
+                s = s_min + i * pitch
 
-                # ---- place AFTER a gap ----
-                s_edge = last_end + gap + edge_length / 2
+                start = s - bump_length / 2
+                end = s + bump_length / 2
 
-                px = p0.x + tx * s_edge
-                py = p0.y + ty * s_edge
+                # ---- clip to usable edge ----
+                clipped_start = max(start, allowed_start)
+                clipped_end = min(end, allowed_end)
+
+                length = clipped_end - clipped_start
+
+                if length < edge_length_min:
+                    continue
+
+                # ---- recompute center after clipping ----
+                s_clipped = (clipped_start + clipped_end) / 2
+
+                px = p0.x + tx * s_clipped
+                py = p0.y + ty * s_clipped
 
                 offset = normal_offset_scale * offset_factor
                 px += normal.x * offset
                 py += normal.y * offset
 
-                loc = bump_wall_location(px, py, z, p0, p1, normal)
-                all_solids.append(edge_bump.moved(loc))
+                # ---- reuse base if full size ----
+                if abs(length - bump_length) < 1e-6:
+                    bump = base
+                else:
+                    bump = make_bump(
+                        length=length,
+                        height=bump_height,
+                        depth=bump_depth,
+                    )
 
+                loc = bump_wall_location(px, py, z, p0, p1, normal)
+                all_solids.append(bump.moved(loc))
         z += delta_h
         layer_index += 1
 
