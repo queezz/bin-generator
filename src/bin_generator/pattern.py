@@ -2,7 +2,7 @@ import cadquery as cq
 import math
 
 
-def make_bump(x=8, y=8, z=0.8):
+def make_bump(x=18, y=8, z=0.8):
     wp = cq.Workplane("XY").box(x, y, z, centered=(True, True, False))
 
     # chamfer top edges slightly
@@ -118,12 +118,12 @@ def place_wall_pattern(
     y,
     h,
     big_r=10.0,
-    delta_pattern=10.0,
+    delta_pattern=25.0,
     delta_h=10.0,
     r_sphere=0.6,
     z_margin_top=5.0,
     z_margin_bottom=10.0,
-    xy_margin=5.0,
+    xy_margin=0.0,
     offset_factor=0.0,
 ):
     all_solids = []
