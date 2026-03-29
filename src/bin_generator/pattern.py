@@ -83,31 +83,16 @@ def sample_line(p0, p1, spacing, xy_margin, phase, big_r=10.0):
     L = math.hypot(dx, dy)
 
     if L < 1e-6:
-        return []
+        return None
 
     tx = dx / L
     ty = dy / L
 
     usable = L - 2 * xy_margin
     if usable <= 0:
-        return []
+        return None
 
-    # stable count
-    n = max(1, int(round(usable / spacing)))
-    step = usable / n
-
-    pts = []
-    for i in range(n + 1):
-        s = xy_margin + i * step + phase
-
-        # wrap phase instead of dropping points
-        s = xy_margin + (s - xy_margin) % usable
-
-        px = p0.x + tx * s
-        py = p0.y + ty * s
-        pts.append(cq.Vector(px, py, 0))
-
-    return pts
+    return (tx, ty, usable, L)
 
 
 # -------------------------------
@@ -130,6 +115,8 @@ def place_wall_pattern(
 
     # build ONE bump
     base = make_bump()
+    bb = base.BoundingBox()
+    X = bb.xlen
 
     z = z_margin_bottom
     layer_index = 0
@@ -140,14 +127,62 @@ def place_wall_pattern(
         phase = 0.0 if layer_index % 2 == 0 else delta_pattern * 0.5
 
         for p0, p1, normal in edges:
-            pts = sample_line(p0, p1, delta_pattern, xy_margin, phase)
+            result = sample_line(p0, p1, delta_pattern, xy_margin, phase)
+            if result is None:
+                continue
 
-            for p in pts:
+            tx, ty, usable, L = result
+
+            pitch = delta_pattern
+            gap = pitch - X
+
+            # n = int(usable // pitch)
+            s0 = xy_margin + X / 2 + phase
+            s_end = L - xy_margin - X / 2
+
+            # if s0 > s_end:
+            #     n = 0
+            # else:
+            #     n = int((s_end - s0) // pitch) + 1  # keep this
+            #     # BUT clamp by construction:
+            #     if s0 + (n - 1) * pitch > s_end:
+            #         n -= 1
+
+            if s0 > s_end:
+                n = 0
+            else:
+                n = int((s_end - s0) / pitch) + 1
+
+            remainder = usable - n * pitch
+
+            s0 = xy_margin
+            s_start = s0 + X / 2 + phase
+
+            for i in range(n):
+                s = s_start + i * pitch
+
+                px = p0.x + tx * s
+                py = p0.y + ty * s
+
                 offset = r_sphere * offset_factor
-                px = p.x + normal.x * offset
-                py = p.y + normal.y * offset
+                px = px + normal.x * offset
+                py = py + normal.y * offset
                 loc = bump_wall_location(px, py, z, p0, p1, normal)
                 all_solids.append(base.moved(loc))
+
+            if remainder > X * 0.3:
+                X_edge = remainder - gap
+                X_edge = max(X_edge, 1.0)
+                edge_bump = make_bump(x=X_edge, y=bb.ylen, z=bb.zlen)
+                # s_edge = xy_margin + n * pitch + X_edge / 2
+                s_edge = s_start + n * pitch
+                px = p0.x + tx * s_edge
+                py = p0.y + ty * s_edge
+                offset = r_sphere * offset_factor
+                px = px + normal.x * offset
+                py = py + normal.y * offset
+                loc = bump_wall_location(px, py, z, p0, p1, normal)
+                all_solids.append(edge_bump.moved(loc))
 
         z += delta_h
         layer_index += 1
